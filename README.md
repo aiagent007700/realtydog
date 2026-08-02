@@ -370,7 +370,7 @@ Weights are starting guesses. After a few mail campaigns, look at which signals 
 
 ## 12. Open decisions before Week 0
 
-1. **Which 2–3 counties are primary?** Drives the Job 0 spike and the first CAD ingestion.
+1. ~~**Which 2–3 counties are primary?**~~ **Resolved: Dallas + Tarrant first (Collin third)** — DCAD bulk + TAD ArcGIS API both confirmed free; LGBS covers both on the tax-sale side.
 2. **Who owns the direct-mail send?** The pipeline's `assigned_to` needs a real person.
 3. **Entity + operating agreement.** Shapes how the pipeline records a decision — who votes, and what "approved" means.
 4. **CAD access per county** (bulk vs. search-only vs. paid) — the first thing to verify, because it's the whole backbone.

@@ -17,6 +17,13 @@ Format: `Trigger → Handler → … → Side effect`.
   (`users, sources, parcels, distress_signals, prospects, deals, outreach_log, votes`)
   + `postgis` / `pg_trgm` extensions. Applies cleanly against a PostGIS DB.
 
+## Partially built 🟡
+
+- **JOB-002 core** — `app/ingest/parcels.py` (`RawParcel`, `normalize()`, `meets_buy_box()`,
+  derived owner_type/absentee/tenure). Pure logic, present and committed, but **not yet
+  wired** to a data source, the DB, or the scheduler (`job_cad_refresh` is still a stub).
+  Primary counties decided: Dallas + Tarrant.
+
 ## NOT wired yet 🔴 (see STUBS.md)
 
 - **All 7 scheduler jobs are stubs** — no data is ingested, scored, or dispatched.

@@ -19,11 +19,13 @@ Status: 🔴 not started · 🟡 in progress · 🟢 done
   bulk-ZIP, Denton is downloads + ArcGIS** — so JOB-002 is API clients + one ZIP loader,
   not a scraper. Tax-sale side: LGBS (Dallas/Tarrant, JS SPA), MVBA (Collin/Denton),
   Perdue Brandon; lists drop ~15th monthly; match by account+cause+legal, not address.
+  **Primary-county decision: RESOLVED (2026-08-02) → Dallas + Tarrant first, Collin third.**
   **Remaining before this closes:** (1) field-level confirmation per county (owner mailing
-  address, acreage, improvement SF, land-use, tax-exempt flag) from each field-reference
-  doc; (2) inspect the LGBS download endpoint/format interactively; (3) the primary-county
-  decision (research recommends **Dallas + Tarrant** first, Collin third). Then seed a
-  `sources` row per county. README §5 Job 0. **Blocks JOB-002, JOB-008.**
+  address, acreage, improvement SF, land-use code, tax-exempt flag) from each field-reference
+  doc — in particular TAD's land-use code field (not in the visible schema) and whether
+  commercial improvement SF lives outside `LIVING_ARE`; (2) inspect the LGBS download
+  endpoint/format interactively; (3) seed a `sources` row per county. README §5 Job 0.
+  **Blocks the buy-box classification half of JOB-002, and JOB-008.**
 - **INFRA-001 — Provision Postgres+PostGIS + deploy** 🔴
   Supabase project (PostGIS preinstalled) + Railway app + env vars → `alembic upgrade head`.
   README §14. Needed before any job can persist data.
@@ -37,10 +39,18 @@ Status: 🔴 not started · 🟡 in progress · 🟢 done
   Highest yield/effort: pre-filtered distressed owners, DFW-wide, free. Parse
   LGBS / MVBA / Perdue Brandon HTML+PDF → `distress_signals(signal_type='tax_sale')`.
   Match by APN/legal description (rows lack clean street addresses). First real leads.
-- **JOB-002 — CAD parcel universe** 🔴 (Job 2, P0)
+- **JOB-002 — CAD parcel universe** 🟡 (Job 2, P0 — WIP)
   The universe of buy-box candidates + owner mailing addresses (enables mail-first).
-  Bulk CAD for 2–3 primary counties → `parcels`; compute `meets_buy_box` + absentee /
-  tenure / owner_type. Depends on SPIKE-000. **Every off-market prospect derives from here.**
+  Bulk CAD for the primary counties (Dallas + Tarrant) → `parcels`; compute `meets_buy_box`
+  + absentee / tenure / owner_type. **Every off-market prospect derives from here.**
+  **Done:** the pure core (`app/ingest/parcels.py` — `RawParcel`, `normalize()`,
+  `meets_buy_box()`, derived fields; fail-closed on missing acreage/type). **Remaining:**
+  TAD ArcGIS adapter (field names verified in `docs/data_sources.md`), DCAD bulk-ZIP
+  adapter (pending field-map confirmation), `parcels` upsert, wire `job_cad_refresh`,
+  unit tests. **Known caveat:** TAD `LIVING_ARE` is residential SF — commercial improvement
+  SF + land-use code need SPIKE-000 field confirmation, so `property_type` classification
+  and the 15,000 SF check are deferred (parcels ingest now; `meets_buy_box` stays False
+  until type resolves — fail-closed by design).
 - **JOB-003 — Foreclosure postings** 🔴 (Job 3, P1)
   Substitute Trustee notices (county clerk, first-Tuesday sales) → `distress_signals`.
 - **JOB-004 — Probate + Lis Pendens** 🔴 (Job 4, P1)
@@ -98,7 +108,7 @@ Status: 🔴 not started · 🟡 in progress · 🟢 done
 
 ## Open decisions (block related work)
 
-1. **Primary 2–3 counties** — drives SPIKE-000 / JOB-002.
+1. ~~**Primary 2–3 counties**~~ — **RESOLVED 2026-08-02: Dallas + Tarrant first, Collin third.**
 2. **Who owns the mail send** — `prospects.assigned_to` needs a real person.
 3. **Entity + operating agreement** — how a `/vote` records a group decision.
 4. **Standard return-gate assumptions** — negotiated-discount %, conversion $/SF, ramp
