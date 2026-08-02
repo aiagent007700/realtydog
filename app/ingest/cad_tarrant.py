@@ -47,18 +47,28 @@ _CHURCH_STRONG = (
 # count them as a church when they appear as a non-leading token.
 _CHURCH_NONLEADING = ("CHURCH", "TEMPLE", "CHAPEL", "PARISH", "CATHEDRAL", "TABERNACLE")
 
+# Religious-ADJACENT institutions that share denomination words but are NOT event-venue
+# candidates (hospitals, schools, universities, seminaries). Checked first — they win.
+_NOT_CHURCH = (
+    "HOSPITAL", "MEDICAL", "CLINIC", "HEALTH", "UNIVERSITY", "COLLEGE", "SCHOOL",
+    "SEMINARY", "THEOLOGIC", "ACADEMY",
+)
+
 
 def _classify(attrs: dict) -> str | None:
     """Interim, high-precision, POSITIVE-ONLY property_type classification.
 
     The TADParcels GIS layer has no land-use code (verified — see module docstring),
     so full classification needs the appraisal-roll join (STUBS JOB-002b). Until then we
-    assert only the one type reliably inferable from the owner name: `church`. Everything
-    else returns None, keeping meets_buy_box fail-closed.
+    assert only the one type reliably inferable from the owner name: `church`, while
+    excluding religious-named institutions (hospitals/schools/universities/seminaries)
+    that are not venue candidates. Everything else returns None (fail-closed).
     """
     owner = (attrs.get("OWNER_NAME") or "").upper()
     if not owner:
         return None
+    if any(x in owner for x in _NOT_CHURCH):
+        return None  # religious-named institution, not a church/venue
     if any(m in owner for m in _CHURCH_STRONG):
         return "church"
     tokens = owner.split()
@@ -129,6 +139,9 @@ def fetch_tarrant_parcels(where: str = "LAND_ACRES >= 5", timeout: float = 30.0)
                 "returnGeometry": "true",
                 "outSR": "4326",
                 "f": "json",
+                # Stable ordering is required for correct resultOffset paging — without it
+                # ArcGIS can repeat or SKIP records across pages (skips = silent under-collection).
+                "orderByFields": "OBJECTID",
                 "resultOffset": offset,
                 "resultRecordCount": PAGE,
             }

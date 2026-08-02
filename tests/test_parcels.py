@@ -91,3 +91,14 @@ def test_classify_church_positive_only():
     # No religious marker -> None (commercial/farm need the appraisal-roll join)
     assert _classify({"OWNER_NAME": "ACME HOLDINGS LLC"}) is None
     assert _classify({"OWNER_NAME": ""}) is None
+
+
+def test_classify_excludes_religious_institutions():
+    # Denomination word present, but these are institutions, not churches/venues.
+    assert _classify({"OWNER_NAME": "ALL SAINTS EPISCOPAL SCHOOL"}) is None
+    assert _classify({"OWNER_NAME": "METHODIST HOSPITALS OF DALLAS"}) is None
+    assert _classify({"OWNER_NAME": "ARLINGTON BAPTIST UNIVERSITY"}) is None
+    assert _classify({"OWNER_NAME": "SOUTHWESTERN BAPTIST THEOLOGICAL"}) is None
+    assert _classify({"OWNER_NAME": "NOLAN CATHOLIC HIGH SCHOOL"}) is None
+    # A plain church still classifies.
+    assert _classify({"OWNER_NAME": "RUSH CREEK BAPTIST CHURCH"}) == "church"
