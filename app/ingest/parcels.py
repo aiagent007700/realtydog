@@ -43,6 +43,7 @@ class RawParcel:
     year_built: int | None = None
     assessed_value: float | None = None
     last_sale_date: date | None = None
+    tax_exempt: bool | None = None  # from the appraisal-roll state code (X = exempt)
     source: str | None = None
 
 
@@ -110,6 +111,7 @@ def normalize(p: RawParcel) -> dict:
         "year_built": p.year_built,
         "assessed_value": p.assessed_value,
         "last_sale_date": p.last_sale_date,
+        "tax_exempt": p.tax_exempt,
         "absentee": _is_absentee(p.situs_address, p.owner_mailing_address),
         "tenure_years": _tenure_years(p.last_sale_date),
         "meets_buy_box": meets_buy_box(p),

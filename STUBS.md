@@ -54,15 +54,21 @@ Status: 🔴 not started · 🟡 in progress · 🟢 done
   field-map confirmation to enable Dallas; (3) first live run against a provisioned PostGIS DB
   (INFRA-001); (4) seed `sources` rows. **Caveat:** TAD `LIVING_ARE` is residential SF, so
   commercial improvement SF + the 15,000 SF check are deferred to enrichment.
-- **JOB-002b — TAD appraisal-roll join for land-use + commercial SF** 🔴 (P1)
-  Confirmed 2026-08-02: the TAD GIS layer has NO state-category/land-use code (PARCELTYPE is
-  geometry type; EXEMPTION_ blank) — so full `property_type` classification (F1 commercial,
-  F2 industrial, E farm/ranch → barn) AND real commercial improvement SF require joining the
-  TAD **appraisal-roll download** (`tad.org/resources/data-downloads`) to the GIS layer on
-  `ACCOUNT`. This also closes the `LIVING_ARE`-is-residential caveat and re-enables the
-  15,000 SF check. Until built, only churches (owner-name heuristic) reach the buy box.
-  Needs: confirm the roll's file format + state-category-code + improvement-SF columns
-  (same field-doc discipline as SPIKE-000), then a join step in `cad_refresh`.
+- **JOB-002b — TAD appraisal-roll join for land-use + commercial SF** 🟡 (P1 — WIP)
+  The TAD GIS layer has NO state-category/land-use code — so full `property_type`
+  classification (F1 commercial, F2 industrial, E/D2 farm/ranch→barn) AND real commercial
+  improvement SF require joining the TAD **PropertyData** export (pipe-delimited, joins on
+  ACCOUNT/TAXPIN) to the GIS layer. **Built (`cad_tarrant_roll.py`):** the verified Texas
+  SPTB state-code→type mapping (`classify_state_code`, `is_exempt`), `parse_roll` (pipe
+  DictReader), `enrich_from_roll` (roll type wins over the church heuristic; sets SF,
+  land_use_code, tax_exempt; church+X stays church but flagged exempt), wired into
+  `cad_refresh`; `tax_exempt` threaded through RawParcel→normalize→upsert; 6 tests.
+  **The ONE remaining piece:** the PropertyData column names/positions (account, state
+  code, improvement SF) — the layout PDF
+  (`tad.org/content/forms/PropertyData&PropertyLocationLayouts.pdf`) blocks automated fetch
+  (403), so confirm it manually, fill `COL` + `ROLL_URL`, and flip `COLUMNS_CONFIRMED=True`.
+  Until then `load_tarrant_roll()` returns `{}` (church-only classification, no behaviour
+  change). Closes the `LIVING_ARE`-residential caveat + re-enables the 15,000 SF check once on.
 - **JOB-003 — Foreclosure postings** 🔴 (Job 3, P1)
   Substitute Trustee notices (county clerk, first-Tuesday sales) → `distress_signals`.
 - **JOB-004 — Probate + Lis Pendens** 🔴 (Job 4, P1)

@@ -9,6 +9,7 @@ import logging
 
 from app.ingest.cad_dallas import fetch_dallas_parcels
 from app.ingest.cad_tarrant import fetch_tarrant_parcels
+from app.ingest.cad_tarrant_roll import enrich_from_roll, load_tarrant_roll
 from app.ingest.parcels import normalize
 from app.ingest.persist import upsert_parcels
 
@@ -25,9 +26,12 @@ def run_cad_refresh() -> int:
     total = 0
     for county, fetch in SOURCES.items():
         try:
-            written = upsert_parcels(normalize(p) for p in fetch())
+            # JOB-002b: load the appraisal roll once, then overlay land-use + SF per parcel.
+            # Empty (unconfirmed) roll -> enrich_from_roll is a no-op (church-only classify).
+            roll = load_tarrant_roll() if county == "Tarrant" else {}
+            written = upsert_parcels(normalize(enrich_from_roll(p, roll)) for p in fetch())
             total += written
-            log.info("cad_refresh %s: upserted %d parcels", county, written)
+            log.info("cad_refresh %s: upserted %d parcels (roll entries=%d)", county, written, len(roll))
         except Exception as exc:  # noqa: BLE001 - fail open, per-county isolation
             log.warning("cad_refresh %s failed: %s", county, exc)
     log.info("cad_refresh done: total=%d parcels", total)

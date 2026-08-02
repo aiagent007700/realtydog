@@ -22,11 +22,13 @@ Format: `Trigger → Handler → … → Side effect`.
 - **JOB-002 (CAD parcel universe)** — code chain complete and unit-tested (10 tests):
   `job_cad_refresh` → `run_cad_refresh` → `fetch_tarrant_parcels` (TAD ArcGIS, verified
   fields) → `normalize` → `upsert_parcels` (PostGIS `parcels`). Dallas adapter is a gated
-  scaffold. Classification: **church candidates now pass the buy box** (owner-name interim);
-  commercial/industrial/farm await the TAD appraisal-roll join (JOB-002b, land-use code is
-  confirmed absent from the GIS layer). **Not yet a live wire:** no run against a provisioned
-  PostGIS DB. So the chain *ingests* parcels and *can* surface church candidates, but the
-  first real run needs INFRA-001. Primary counties: Dallas + Tarrant.
+  scaffold. Classification: **church candidates pass the buy box** (owner-name interim). The
+  **JOB-002b appraisal-roll join is built** (`cad_tarrant_roll.py`: verified SPTB
+  state-code→type mapping + `enrich_from_roll`, wired into `cad_refresh`) but **dormant** —
+  `load_tarrant_roll()` returns `{}` until the PropertyData column layout is confirmed and
+  `COLUMNS_CONFIRMED` is flipped, so commercial/industrial/farm don't classify yet. **Not
+  yet a live wire:** no run against a provisioned PostGIS DB (INFRA-001). Primary counties:
+  Dallas + Tarrant.
 
 ## NOT wired yet 🔴 (see STUBS.md)
 

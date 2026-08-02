@@ -60,6 +60,15 @@ appraisal-roll download** (`tad.org/resources/data-downloads`), joined to the GI
 requires that roll join — see STUBS **JOB-002b**. Interim: churches are inferred from the
 owner name (high-precision, positive-only); commercial/industrial/farm wait for the join.
 
+**The roll (JOB-002b):** TAD's **PropertyData** export — pipe-delimited ("AAAA" legacy
+layout), ~1.5M rows / ~56 cols, subsets `PropertyData-FullSet` / `-Commercial` /
+`-Residential` / `-Personal` / `-Minerals`; joins to the GIS layer by **ACCOUNT / TAXPIN**.
+The SPTB state-category code maps to our types (F1→commercial, F2→industrial, E/D2→
+ranch/barn, X→exempt). **The exact column names/positions are NOT yet confirmed** — the
+layout doc `tad.org/content/forms/PropertyData&PropertyLocationLayouts.pdf` returns 403 to
+automated fetch. Confirm it manually (open the PDF, or read the delimited file's header),
+then fill `COL` + `ROLL_URL` and set `COLUMNS_CONFIRMED=True` in `app/ingest/cad_tarrant_roll.py`.
+
 ---
 
 ## Still to verify during the build (field-level)
