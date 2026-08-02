@@ -1,5 +1,5 @@
 """Unit tests for the JOB-002 parcel core + the TAD field mapping. No DB/network."""
-from app.ingest.cad_tarrant import map_feature
+from app.ingest.cad_tarrant import _classify, map_feature
 from app.ingest.parcels import (
     RawParcel,
     _is_absentee,
@@ -66,12 +66,28 @@ def test_tad_map_feature():
     assert rp.lat == 32.9 and rp.lon == -97.2
     assert rp.assessed_value == 850000.0
 
+    assert rp.property_type == "church"  # BAPTIST CHURCH -> church (interim classifier)
+
     d = normalize(rp)
     assert d["owner_type"] == "entity"
     assert d["absentee"] is True  # PO BOX 9 != 100 FARM RD
-    # property_type unresolved -> not in the buy box yet (fail closed, by design)
-    assert d["meets_buy_box"] is False
+    # church on 18.5 acres in Tarrant -> passes the physical buy box
+    assert d["meets_buy_box"] is True
 
 
 def test_tad_map_feature_no_account():
     assert map_feature({"OWNER_NAME": "X"}, None) is None
+
+
+def test_classify_church_positive_only():
+    # Strong denomination markers -> church
+    assert _classify({"OWNER_NAME": "FIELDER ROAD BAPTIST CHURCH IN"}) == "church"
+    assert _classify({"OWNER_NAME": "ST MARY CATHOLIC CHURCH"}) == "church"
+    assert _classify({"OWNER_NAME": "GRACE MINISTRIES"}) == "church"
+    assert _classify({"OWNER_NAME": "FIRST UNITED METHODIST CHURCH OF AZLE"}) == "church"
+    # 'CHURCH'/'TEMPLE' as a LEADING token is a surname, not a church
+    assert _classify({"OWNER_NAME": "CHURCH JOHN R"}) is None
+    assert _classify({"OWNER_NAME": "TEMPLE ROBERT"}) is None
+    # No religious marker -> None (commercial/farm need the appraisal-roll join)
+    assert _classify({"OWNER_NAME": "ACME HOLDINGS LLC"}) is None
+    assert _classify({"OWNER_NAME": ""}) is None

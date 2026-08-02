@@ -22,8 +22,9 @@ Status: 🔴 not started · 🟡 in progress · 🟢 done
   **Primary-county decision: RESOLVED (2026-08-02) → Dallas + Tarrant first, Collin third.**
   **Remaining before this closes:** (1) field-level confirmation per county (owner mailing
   address, acreage, improvement SF, land-use code, tax-exempt flag) from each field-reference
-  doc — in particular TAD's land-use code field (not in the visible schema) and whether
-  commercial improvement SF lives outside `LIVING_ARE`; (2) inspect the LGBS download
+  doc — TAD's land-use code is **confirmed absent from the GIS layer** (2026-08-02); it +
+  commercial improvement SF live in the appraisal roll (now tracked as JOB-002b); (2) inspect
+  the LGBS download
   endpoint/format interactively; (3) seed a `sources` row per county. README §5 Job 0.
   **Blocks the buy-box classification half of JOB-002, and JOB-008.**
 - **INFRA-001 — Provision Postgres+PostGIS + deploy** 🔴
@@ -48,11 +49,20 @@ Status: 🔴 not started · 🟡 in progress · 🟢 done
   (`cad_dallas.py`, gated on `FIELD_MAP_CONFIRMED`); `parcels` upsert (`persist.py`, builds
   PostGIS `geo_point`, `ON CONFLICT (county,apn)`); driver (`cad_refresh.py`); `job_cad_refresh`
   wired (thread-offloaded, fail-open); **10 unit tests passing**. **Remaining before candidates
-  actually flow:** (1) TAD land-use code field → `property_type` classification — until then
-  every parcel ingests but `meets_buy_box` stays False (fail-closed by design); (2) DCAD
+  actually flow:** (1) **churches now classify** from owner name (interim) so church
+  candidates pass the buy box; commercial/industrial/farm need JOB-002b; (2) DCAD
   field-map confirmation to enable Dallas; (3) first live run against a provisioned PostGIS DB
   (INFRA-001); (4) seed `sources` rows. **Caveat:** TAD `LIVING_ARE` is residential SF, so
   commercial improvement SF + the 15,000 SF check are deferred to enrichment.
+- **JOB-002b — TAD appraisal-roll join for land-use + commercial SF** 🔴 (P1)
+  Confirmed 2026-08-02: the TAD GIS layer has NO state-category/land-use code (PARCELTYPE is
+  geometry type; EXEMPTION_ blank) — so full `property_type` classification (F1 commercial,
+  F2 industrial, E farm/ranch → barn) AND real commercial improvement SF require joining the
+  TAD **appraisal-roll download** (`tad.org/resources/data-downloads`) to the GIS layer on
+  `ACCOUNT`. This also closes the `LIVING_ARE`-is-residential caveat and re-enables the
+  15,000 SF check. Until built, only churches (owner-name heuristic) reach the buy box.
+  Needs: confirm the roll's file format + state-category-code + improvement-SF columns
+  (same field-doc discipline as SPIKE-000), then a join step in `cad_refresh`.
 - **JOB-003 — Foreclosure postings** 🔴 (Job 3, P1)
   Substitute Trustee notices (county clerk, first-Tuesday sales) → `distress_signals`.
 - **JOB-004 — Probate + Lis Pendens** 🔴 (Job 4, P1)

@@ -48,6 +48,18 @@ real open-data APIs**, which are cleaner than parsing bulk ZIPs.
 Socrata, Denton ArcGIS) over screen-scraping; use **DCAD's bulk ZIP** for Dallas. JOB-002
 is therefore a small set of API clients + one ZIP loader — **not a scraper**.
 
+### TAD land-use — confirmed ABSENT from the GIS layer (2026-08-02)
+
+Pulled the full `TADParcels/FeatureServer/0` field list (56 fields) and sampled records.
+**The GIS layer carries no land-use / state-category code:** `PARCELTYPE` is geometry type
+(1=lot, 2=tract, 6=reference), `DESCR` is `LOT`/`TRACT`/`REFERENCE`, and `EXEMPTION_` is
+blank even for church- and government-owned parcels. The Texas state category code
+(F1 commercial, F2 industrial, E farm/ranch) and exemption status live only in the **TAD
+appraisal-roll download** (`tad.org/resources/data-downloads`), joined to the GIS layer by
+`ACCOUNT`. Consequence: `property_type` classification (and commercial improvement SF)
+requires that roll join — see STUBS **JOB-002b**. Interim: churches are inferred from the
+owner name (high-precision, positive-only); commercial/industrial/farm wait for the join.
+
 ---
 
 ## Still to verify during the build (field-level)

@@ -6,11 +6,17 @@ Fields include: ACCOUNT, OWNER_NAME, SITUS_ADDR, OWNER_ADDR, OWNER_CITY, ZIPCODE
 YEAR_BUILT, LIVING_ARE, LAND_ACRES, IMPR_VALUE, TOTAL_VALU, DEED_DATE.
 
 CAVEAT (STUBS JOB-002): LIVING_ARE is *residential* living area; commercial / barn /
-church improvement SF is often null here and must come from the appraisal roll or
-another field. So improvement_sf may be None for the exact target types — the 15,000 SF
-criterion is deferred to enrichment, not applied in meets_buy_box. The land-use code
-field is also not confirmed, so property_type classification is a no-op until SPIKE-000
-resolves it (parcels still ingest; they just won't pass the buy box yet — fail-closed).
+church improvement SF is often null here and must come from the appraisal roll — so
+improvement_sf may be None for the exact target types, and the 15,000 SF criterion is
+deferred to enrichment, not applied in meets_buy_box.
+
+LAND-USE (verified 2026-08-02, docs/data_sources.md): the TADParcels layer carries NO
+state-category / land-use code — PARCELTYPE is geometry type (1/2/6), DESCR is
+LOT/TRACT/REFERENCE, EXEMPTION_ is blank even for church/government owners. Full
+property_type classification (commercial/industrial/farm) therefore needs the TAD
+appraisal-roll join on ACCOUNT (STUBS JOB-002b). As a safe interim, _classify() infers
+only *churches* from the owner name (high-precision, positive-only); everything else
+stays None so meets_buy_box remains fail-closed.
 """
 from __future__ import annotations
 
@@ -30,11 +36,34 @@ TAD_QUERY_URL = (
 )
 PAGE = 2000  # server MaxRecordCount is 10000; stay well under
 
+# Unambiguous religious-institution markers — essentially never surnames, so a plain
+# substring match is safe.
+_CHURCH_STRONG = (
+    "BAPTIST", "METHODIST", "CATHOLIC", "LUTHERAN", "PRESBYTERIAN", "EPISCOPAL",
+    "PENTECOSTAL", "EVANGEL", "MINISTRIES", "MINISTRY", "SYNAGOGUE", "MOSQUE",
+    "DIOCESE", "CONGREGATION", "WORSHIP", "CHURCH OF", "ASSEMBLY OF GOD",
+)
+# Ambiguous words that CAN be surnames (TAD owner names are LASTNAME-first), so only
+# count them as a church when they appear as a non-leading token.
+_CHURCH_NONLEADING = ("CHURCH", "TEMPLE", "CHAPEL", "PARISH", "CATHEDRAL", "TABERNACLE")
+
 
 def _classify(attrs: dict) -> str | None:
-    # TODO(JOB-002 / SPIKE-000): map TAD land-use code -> canonical ELIGIBLE_TYPES once
-    # the code field is confirmed from the FeatureServer field list. Until then, return
-    # None so meets_buy_box stays False (fail-closed on unknown type).
+    """Interim, high-precision, POSITIVE-ONLY property_type classification.
+
+    The TADParcels GIS layer has no land-use code (verified — see module docstring),
+    so full classification needs the appraisal-roll join (STUBS JOB-002b). Until then we
+    assert only the one type reliably inferable from the owner name: `church`. Everything
+    else returns None, keeping meets_buy_box fail-closed.
+    """
+    owner = (attrs.get("OWNER_NAME") or "").upper()
+    if not owner:
+        return None
+    if any(m in owner for m in _CHURCH_STRONG):
+        return "church"
+    tokens = owner.split()
+    if any(w in tokens[1:] for w in _CHURCH_NONLEADING):
+        return "church"
     return None
 
 
