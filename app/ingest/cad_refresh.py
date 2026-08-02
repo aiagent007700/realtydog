@@ -36,3 +36,8 @@ def run_cad_refresh() -> int:
             log.warning("cad_refresh %s failed: %s", county, exc)
     log.info("cad_refresh done: total=%d parcels", total)
     return total
+
+
+if __name__ == "__main__":  # manual first-run trigger: `python -m app.ingest.cad_refresh`
+    logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s %(message)s")
+    print(f"cad_refresh: upserted {run_cad_refresh()} parcels")
