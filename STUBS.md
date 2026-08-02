@@ -12,12 +12,18 @@ Status: 🔴 not started · 🟡 in progress · 🟢 done
 
 ## Phase 0 — setup (do first)
 
-- **SPIKE-000 — Per-county CAD access spike** 🔴
+- **SPIKE-000 — Per-county CAD access spike** 🟡 (desk research done — see `docs/data_sources.md`)
   The whole discovery backbone is CAD parcel data, and every county publishes it
-  differently (bulk vs. search-only vs. paid; different fields/formats). Nothing that
-  depends on the parcel universe can be built until we know what each primary county
-  actually offers. Record findings in a `sources` row per county. README §5 Job 0.
-  **Blocks JOB-002, JOB-008.**
+  differently. Desk research (2026-08-02) confirmed all four core counties publish
+  appraisal data free; **Tarrant (ArcGIS) and Collin (Socrata) are API-first, Dallas is
+  bulk-ZIP, Denton is downloads + ArcGIS** — so JOB-002 is API clients + one ZIP loader,
+  not a scraper. Tax-sale side: LGBS (Dallas/Tarrant, JS SPA), MVBA (Collin/Denton),
+  Perdue Brandon; lists drop ~15th monthly; match by account+cause+legal, not address.
+  **Remaining before this closes:** (1) field-level confirmation per county (owner mailing
+  address, acreage, improvement SF, land-use, tax-exempt flag) from each field-reference
+  doc; (2) inspect the LGBS download endpoint/format interactively; (3) the primary-county
+  decision (research recommends **Dallas + Tarrant** first, Collin third). Then seed a
+  `sources` row per county. README §5 Job 0. **Blocks JOB-002, JOB-008.**
 - **INFRA-001 — Provision Postgres+PostGIS + deploy** 🔴
   Supabase project (PostGIS preinstalled) + Railway app + env vars → `alembic upgrade head`.
   README §14. Needed before any job can persist data.
