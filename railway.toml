@@ -1,0 +1,14 @@
+# Railway deployment config. Native auto-deploy on push to main.
+# Provision a PostGIS-capable Postgres separately (Supabase/Neon) and set
+# DATABASE_URL, plus the other keys from .env.example, in Railway variables.
+
+[build]
+builder = "dockerfile"
+
+[deploy]
+preDeployCommand = "alembic upgrade head"
+startCommand = "uvicorn app.main:app --host 0.0.0.0 --port $PORT"
+healthcheckPath = "/health"
+healthcheckTimeout = 30
+restartPolicyType = "on_failure"
+restartPolicyMaxRetries = 3

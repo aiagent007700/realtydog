@@ -467,4 +467,64 @@ A $5M all-in on a $2.5M church/commercial retrofit:
 
 ---
 
+## 14. Deployment & running costs
+
+RealtyDog runs as one small service; deployment is four moving parts.
+
+### What runs
+
+| Component | What it is | Requirement |
+|---|---|---|
+| App | One container: FastAPI + APScheduler | 1 small instance (~0.5 vCPU, 512MB–1GB) |
+| Database | Postgres with PostGIS + pg_trgm | Managed Postgres supporting the PostGIS extension |
+| Object storage | Property photos | S3 / Backblaze B2 / Cloudflare R2 / Supabase Storage |
+| Telegram bot | The whole UI | Bot token (BotFather) + group chat ID |
+
+### Accounts & keys
+
+| Service | For | Cost |
+|---|---|---|
+| Hosting (Railway / Fly / VPS) | Runs the app | Paid, small |
+| Postgres + PostGIS (Supabase / Neon) | Database | Free tier at this scale |
+| Telegram (BotFather) | Bot + alerts | Free |
+| Google Maps Platform | Drive-time, geocoding, hotels | Pay-as-you-go |
+| LLM (OpenRouter) | Deal-card narratives | Pennies |
+| ProPublica Nonprofit Explorer | 990 financials | Free |
+| County CAD / tax-sale lists | Discovery backbone | Free / public |
+| Email (SendGrid / SES) | Daily digest | Free tier |
+| Skip-trace API (later) | Phone numbers for hot leads | Pay-per-hit |
+
+### Recommended stack
+
+- **Compute:** Railway (single process, auto-deploy on push).
+- **Database:** Supabase — managed Postgres with PostGIS pre-installed + a free tier, and object storage included. (Railway's default Postgres doesn't bundle PostGIS; use Supabase/Neon or a `postgis/postgis` image.)
+- **Deploy flow:** Dockerfile → push → auto-deploy → `alembic upgrade head` → FastAPI + APScheduler boot. Telegram uses long-polling (no public webhook needed).
+
+### Charges — two buckets
+
+**Infrastructure (fixed, tiny):**
+
+| Line | Monthly |
+|---|---|
+| App compute | $5–20 |
+| Postgres + PostGIS | $0–15 |
+| Object storage | $0–5 |
+| LLM narratives | $1–10 |
+| Google Maps (cached) | $0–30 |
+| Email + Telegram | $0 |
+| **Infra total** | **~$25–50 / mo** |
+
+**Outreach (variable — marketing, not software):**
+
+| Line | Cost |
+|---|---|
+| Skip-trace (hot leads only) | ~$0.10–0.25 each |
+| Direct-mail campaign | ~$0.50–1.00 per piece → 300–500 owners = $150–500 |
+
+**One-time:** ~$0 — domain optional (~$12/yr); a county or two may charge a small public-records fee for bulk CAD data.
+
+**Bottom line:** running the software is ~$25–50/month; the meaningful spend is direct mail, a marketing choice dialed up or down. For a group deploying millions in capital, the tech stack is a rounding error.
+
+---
+
 *RealtyDog · lean build spec v1.0 · internal working document for the partnership*
