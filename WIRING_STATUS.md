@@ -15,20 +15,23 @@ Format: `Trigger → Handler → … → Side effect`.
   starts **7 jobs**. Live — but every job body is a `log.info("not implemented")` stub.
 - **Schema** — `alembic upgrade head` → `0001_initial_schema` → 8 tables
   (`users, sources, parcels, distress_signals, prospects, deals, outreach_log, votes`)
-  + `postgis` / `pg_trgm` extensions. Applies cleanly against a PostGIS DB.
+  + `postgis` / `pg_trgm` extensions. **Applied live to Supabase 2026-08-02.**
+- **JOB-002 — Tarrant CAD ingest — LIVE (first run 2026-08-02).** Chain:
+  `job_cad_refresh` → `fetch_tarrant_parcels` (TAD ArcGIS) → `normalize` (+ church
+  classify) → `upsert_parcels` (Supabase PostGIS). **First run: 13,218 Tarrant parcels
+  ≥5 acres ingested; 356 church candidates (`meets_buy_box=true`).** The first real
+  end-to-end wire. Triggered by `python -m app.ingest.cad_refresh`.
 
 ## Partially built 🟡
 
-- **JOB-002 (CAD parcel universe)** — code chain complete and unit-tested (10 tests):
-  `job_cad_refresh` → `run_cad_refresh` → `fetch_tarrant_parcels` (TAD ArcGIS, verified
-  fields) → `normalize` → `upsert_parcels` (PostGIS `parcels`). Dallas adapter is a gated
-  scaffold. Classification: **church candidates pass the buy box** (owner-name interim). The
-  **JOB-002b appraisal-roll join is built** (`cad_tarrant_roll.py`: verified SPTB
-  state-code→type mapping + `enrich_from_roll`, wired into `cad_refresh`) but **dormant** —
-  `load_tarrant_roll()` returns `{}` until the PropertyData column layout is confirmed and
-  `COLUMNS_CONFIRMED` is flipped, so commercial/industrial/farm don't classify yet. **Not
-  yet a live wire:** no run against a provisioned PostGIS DB (INFRA-001). Primary counties:
-  Dallas + Tarrant.
+- **JOB-002b (TAD appraisal-roll join)** — built and wired into `cad_refresh`
+  (`cad_tarrant_roll.py`: verified SPTB state-code→type mapping + `enrich_from_roll`), but
+  **dormant** — `load_tarrant_roll()` returns `{}` until the PropertyData column layout is
+  confirmed and `COLUMNS_CONFIRMED` is flipped. So commercial/industrial/farm don't classify
+  yet (only churches do), and the 15,000 SF check stays deferred. This is why the first live
+  run surfaced 356 *church* candidates and no commercial/barn.
+- **Dallas (DCAD)** — adapter is a gated scaffold (`FIELD_MAP_CONFIRMED=False`); skipped at
+  runtime until its field map is confirmed. Primary counties: Dallas + Tarrant.
 
 ## NOT wired yet 🔴 (see STUBS.md)
 

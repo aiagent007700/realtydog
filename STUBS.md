@@ -27,13 +27,11 @@ Status: 🔴 not started · 🟡 in progress · 🟢 done
   the LGBS download
   endpoint/format interactively; (3) seed a `sources` row per county. README §5 Job 0.
   **Blocks the buy-box classification half of JOB-002, and JOB-008.**
-- **INFRA-001 — Provision Postgres+PostGIS + deploy** 🟡 (runbook ready — needs your accounts)
-  Supabase (PostGIS) + Railway + env vars → `alembic upgrade head`. **Verified:** the
-  migration renders clean DDL offline (`python -m alembic upgrade head --sql`), so it applies
-  the moment `DATABASE_URL` is set. **Runbook:** `docs/deploy.md` (Supabase connection-string
-  gotchas, Telegram, local verify, Railway, first-run). **Manual first ingest trigger added:**
-  `python -m app.ingest.cad_refresh`. **Blocked on you:** creating the Supabase/Railway/Telegram
-  accounts (can't be automated) and setting `DATABASE_URL`. Once done, this is the first live wire.
+- **INFRA-001 — Provision Postgres+PostGIS (Supabase)** 🟢 **DONE 2026-08-02**
+  Supabase project provisioned (PostGIS + pg_trgm enabled), `alembic upgrade head` applied
+  the schema live, and the first `python -m app.ingest.cad_refresh` succeeded: **13,218
+  Tarrant parcels, 356 church candidates**. Runbook: `docs/deploy.md`. **Still open:** Railway
+  hosting (always-on) + Telegram bot wiring — the DB half is done; the app-hosting half remains.
 - **INFRA-002 — Telegram bot + group** 🔴
   BotFather token + group chat ID + the 6 allowed Telegram IDs (`ALLOWED_TELEGRAM_IDS`).
   The bot is the entire UI; nothing is user-visible until this exists.
