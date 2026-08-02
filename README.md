@@ -13,8 +13,6 @@
 | Stack | One process, one Postgres |
 | MVP | ~5 focused weeks |
 
-This replaces the original enterprise architecture (six datastores, Celery pools, real-time SLOs, 500-user tenancy, ~$3,835/mo) with a build sized to what we actually are: a small private partnership finding a handful of qualifying properties a week. The enterprise version is deferred to a future SaaS phase — the schema stays multi-user-aware so that pivot is a fan-out, not a rewrite.
-
 ---
 
 ## 1. The group model
@@ -96,7 +94,7 @@ The pro-forma is part of selection, not just analysis. A property must clear *al
 | LLM narrative | Cheap model, on-demand | $1–10 |
 | Skip-trace | Per-hit, hot leads only | pennies |
 | Telegram + email | Free tiers | $0 |
-| **Total** | vs. $3,835 in the enterprise draft | **~$0–100** |
+| **Total** | all-in | **~$0–100** |
 
 ---
 
@@ -148,7 +146,7 @@ Pre-aggregated distress lists (someone already did the filtering) beat raw count
 
 ## 6. Social channels — what can actually auto-flow
 
-Two very different jobs hide under "social media info": **sourcing** (find properties owners are quietly selling on FB/Craigslist/Nextdoor) and **market intel** (competitor-venue pricing, wedding-demand sentiment). Honesty matters — fully-automatic ingestion of most social platforms means scraping, which is the exact ToS/CFAA/fragility channel we cut. So we split by what's genuinely clean to automate.
+Two very different jobs hide under "social media info": **sourcing** (find properties owners are quietly selling on FB/Craigslist/Nextdoor) and **market intel** (competitor-venue pricing, wedding-demand sentiment). Fully-automatic ingestion of most social platforms means scraping, which is a ToS/CFAA/fragility problem. So we split by what's genuinely clean to automate.
 
 | Platform | Value | Auto-flow? | Approach |
 |---|---|---|---|
@@ -160,7 +158,7 @@ Two very different jobs hide under "social media info": **sourcing** (find prope
 
 **The clean auto path — Craigslist RSS (Job 7):** Craigslist exposes an RSS feed on any search URL. We register buy-box searches (land / commercial, acreage + price band, each target county), poll every few hours, keyword-filter to the buy box, and drop matches into `deals` as `source='social'`. No scraping, no proxies — a real feed.
 
-> **The honest "automatic" for the rest:** The six of us *are* a social sensor network. A `/tip <link or photo>` command lets any member forward a Facebook / Nextdoor / LinkedIn find; it enters the same prospect/deal pipeline, gets `/analyze`'d, and shows up on the board. That's social "flowing in" continuously without rebuilding the fragile scraper layer.
+> **The "automatic" for the rest:** The six of us *are* a social sensor network. A `/tip <link or photo>` command lets any member forward a Facebook / Nextdoor / LinkedIn find; it enters the same prospect/deal pipeline, gets `/analyze`'d, and shows up on the board. That's social "flowing in" continuously without the fragility of scraping.
 
 If we later decide fully-automatic FB/Nextdoor ingestion is worth the fragility, isolate it behind its own failure boundary so a broken selector can never take the pipeline down. Market-intel social listening is a separate, lower-priority phase.
 
@@ -361,18 +359,12 @@ Weights are starting guesses. After a few mail campaigns, look at which signals 
 
 ---
 
-## 11. What we deliberately cut — and what carries over
+## 11. Design principles
 
-### Cut from the enterprise draft
-
-MLS/RESO adapters · LoopNet/Crexi/FB scrapers + proxy rotation · listing-photo computer vision · MongoDB, Elasticsearch, Pinecone, Snowflake · Celery worker pools · real-time SLOs & WebSockets · per-user tenancy / RBAC / OAuth · Twilio SMS.
-
-### Domain fixes that carry over (scale-independent)
-
-- **Pro-forma:** ramp columns to the group's targets (Year-2 break-even, Year-3 EBITDA ≥ 10%); working-capital-to-break-even folded into the $5M all-in; conversion-cost scaling fixed (fixed vs. occupancy-driven, not linear-in-SF); "cap rate" relabeled as development yield.
-- **Scoring:** explainable traffic-light rubric, not a false-precision 0–100 — at ~1–3 closed deals/year you can't validate an "85% accuracy" claim.
-- **Zoning:** a "verify these three things" research checklist (parcel + jurisdiction + code + planning link), not an automated permitted-use verdict — that's a liability line at any scale.
-- **Buyer's agent:** even unlicensed, the group can work with one who legally sets up MLS saved-searches and forwards matches — free MLS coverage without building anything.
+- **Pro-forma models the ramp.** Year-1/2/3 columns to the targets (Year-2 break-even, Year-3 EBITDA ≥ 10%); working capital to break-even folded into the $5M all-in; conversion-cost scaling is fixed vs. occupancy-driven, not linear-in-SF; the yield is labeled a development yield, not a cap rate.
+- **Scoring is an explainable rubric, not a score.** Traffic-light sub-scores, not a false-precision 0–100 — at ~1–3 closed deals/year an "accuracy %" can't be validated.
+- **Zoning is a research checklist, not a verdict.** Parcel + jurisdiction + code + planning link for a human to verify — an automated permitted-use determination is a liability line.
+- **Use a buyer's agent for MLS coverage.** Even unlicensed, the group can work with one who legally sets up MLS saved-searches and forwards matches — free MLS coverage without building anything.
 
 ---
 
