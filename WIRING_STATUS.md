@@ -19,10 +19,13 @@ Format: `Trigger → Handler → … → Side effect`.
 
 ## Partially built 🟡
 
-- **JOB-002 core** — `app/ingest/parcels.py` (`RawParcel`, `normalize()`, `meets_buy_box()`,
-  derived owner_type/absentee/tenure). Pure logic, present and committed, but **not yet
-  wired** to a data source, the DB, or the scheduler (`job_cad_refresh` is still a stub).
-  Primary counties decided: Dallas + Tarrant.
+- **JOB-002 (CAD parcel universe)** — code chain complete and unit-tested (10 tests):
+  `job_cad_refresh` → `run_cad_refresh` → `fetch_tarrant_parcels` (TAD ArcGIS, verified
+  fields) → `normalize` → `upsert_parcels` (PostGIS `parcels`). Dallas adapter is a gated
+  scaffold. **Not yet a live wire:** no run against a provisioned PostGIS DB, and
+  `meets_buy_box` returns False for every parcel until TAD land-use → `property_type`
+  classification lands (SPIKE-000 residual). So the chain *ingests* parcels but produces
+  *zero buy-box candidates* yet — by design, fail-closed. Primary counties: Dallas + Tarrant.
 
 ## NOT wired yet 🔴 (see STUBS.md)
 

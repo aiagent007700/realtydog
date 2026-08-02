@@ -38,7 +38,17 @@ async def job_craigslist_rss() -> None:
 
 
 async def job_cad_refresh() -> None:
-    log.info("job_cad_refresh (Job 2): not implemented yet")
+    """Job 2 — ingest primary-county CAD parcels into `parcels`. Runs the blocking
+    fetch/upsert work in a thread so the event loop stays free."""
+    import asyncio
+
+    from app.ingest.cad_refresh import run_cad_refresh
+
+    try:
+        total = await asyncio.to_thread(run_cad_refresh)
+        log.info("job_cad_refresh (Job 2): upserted %d parcels", total)
+    except Exception as exc:  # noqa: BLE001 - fail open, never crash the scheduler
+        log.warning("job_cad_refresh (Job 2) failed: %s", exc)
 
 
 async def job_nonprofit_990() -> None:

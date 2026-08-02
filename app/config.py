@@ -35,7 +35,7 @@ class Settings(BaseSettings):
     skiptrace_api_key: str = ""
 
     # Selection defaults (Layer-1 buy box)
-    buybox_counties: str = "Dallas,Tarrant,Collin,Denton"
+    buybox_counties: str = "Dallas,Tarrant"  # primary counties (expand as more are ingested)
     buybox_min_acres: float = 5
     buybox_min_sf: int = 15000
     buybox_max_purchase: int = 4_000_000

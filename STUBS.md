@@ -43,14 +43,16 @@ Status: 🔴 not started · 🟡 in progress · 🟢 done
   The universe of buy-box candidates + owner mailing addresses (enables mail-first).
   Bulk CAD for the primary counties (Dallas + Tarrant) → `parcels`; compute `meets_buy_box`
   + absentee / tenure / owner_type. **Every off-market prospect derives from here.**
-  **Done:** the pure core (`app/ingest/parcels.py` — `RawParcel`, `normalize()`,
-  `meets_buy_box()`, derived fields; fail-closed on missing acreage/type). **Remaining:**
-  TAD ArcGIS adapter (field names verified in `docs/data_sources.md`), DCAD bulk-ZIP
-  adapter (pending field-map confirmation), `parcels` upsert, wire `job_cad_refresh`,
-  unit tests. **Known caveat:** TAD `LIVING_ARE` is residential SF — commercial improvement
-  SF + land-use code need SPIKE-000 field confirmation, so `property_type` classification
-  and the 15,000 SF check are deferred (parcels ingest now; `meets_buy_box` stays False
-  until type resolves — fail-closed by design).
+  **Done:** parcel core (`parcels.py`); TAD ArcGIS adapter (`cad_tarrant.py` — verified
+  fields, server-side `LAND_ACRES>=5` slice, paginated, fail-open); DCAD scaffold
+  (`cad_dallas.py`, gated on `FIELD_MAP_CONFIRMED`); `parcels` upsert (`persist.py`, builds
+  PostGIS `geo_point`, `ON CONFLICT (county,apn)`); driver (`cad_refresh.py`); `job_cad_refresh`
+  wired (thread-offloaded, fail-open); **10 unit tests passing**. **Remaining before candidates
+  actually flow:** (1) TAD land-use code field → `property_type` classification — until then
+  every parcel ingests but `meets_buy_box` stays False (fail-closed by design); (2) DCAD
+  field-map confirmation to enable Dallas; (3) first live run against a provisioned PostGIS DB
+  (INFRA-001); (4) seed `sources` rows. **Caveat:** TAD `LIVING_ARE` is residential SF, so
+  commercial improvement SF + the 15,000 SF check are deferred to enrichment.
 - **JOB-003 — Foreclosure postings** 🔴 (Job 3, P1)
   Substitute Trustee notices (county clerk, first-Tuesday sales) → `distress_signals`.
 - **JOB-004 — Probate + Lis Pendens** 🔴 (Job 4, P1)
