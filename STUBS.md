@@ -95,9 +95,15 @@ Status: 🔴 not started · 🟡 in progress · 🟢 done
 - **SEL-001 — Buy-box filter (Layer 1)** 🔴
   Hard pass/fail on parcels (README §2); sets `meets_buy_box`. Missing physical/financial
   data **fails closed**.
-- **SEL-002 — Motivation score (Layer 2)** 🔴
-  Explainable point-sum over `distress_signals` + owner attributes →
-  `prospects.motivation_score` + `score_breakdown` (records *why*). Buckets Hot/Warm/Cold.
+- **SEL-002 — Motivation score (Layer 2)** 🟡 (built — `app/score/motivation.py`)
+  Explainable point-sum over owner attributes + `distress_signals` → `prospects.motivation_score`
+  + `score_breakdown` (the *why*). Buckets Hot ≥60 / Warm 30–59 / Cold <30. Built, wired into
+  the nightly job + `python -m app.score.motivation`; 6 tests. **Live now:** absentee (+15),
+  long-tenure ≥20yr (+10), estate owner (+25). **Contribute once their jobs run:** tax_sale
+  (+40), nonprofit_distress (+35), foreclosure (+35), probate (+25), lis_pendens (+20),
+  code_violation (+15) — `distress_signals` is empty until JOB-001/003/004/008, so nothing
+  reaches Hot from distress yet (churches rank on tenure/absentee for now). **Follow-up:**
+  `out_of_state` (+10) needs `owner_mailing_state`, which the TAD adapter doesn't populate yet.
 - **SEL-003 — Financial return gate (Layer 3)** 🔴
   The pro-forma *is* selection: Year-2 break-even AND Year-3 EBITDA ≥ 10% within the
   $5M all-in, at the README §13 standard assumptions. Populates `deals.all_in_cost /

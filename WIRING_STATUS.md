@@ -32,6 +32,11 @@ Format: `Trigger → Handler → … → Side effect`.
   deferred — the roll has no commercial SF (confirmed).
 - **Dallas (DCAD)** — adapter is a gated scaffold (`FIELD_MAP_CONFIRMED=False`); skipped at
   runtime until its field map is confirmed. Primary counties: Dallas + Tarrant.
+- **SEL-002 (motivation score)** — built (`app/score/motivation.py`) + wired into the nightly
+  job; scores buy-box parcels → `prospects` (score + breakdown). Not yet run against the live
+  DB — first run: `python -m app.score.motivation`. Ranks on owner attributes now (absentee,
+  tenure, estate); distress-signal weights activate when JOB-001/003/004/008 populate
+  `distress_signals`.
 
 ## NOT wired yet 🔴 (see STUBS.md)
 

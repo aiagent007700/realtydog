@@ -56,7 +56,16 @@ async def job_nonprofit_990() -> None:
 
 
 async def job_nightly_score_and_digest() -> None:
-    log.info("job_nightly_score_and_digest: not implemented yet")
+    """SEL-002 motivation scoring (+ DIGEST-001 digest, TODO). Thread-offloaded, fail-open."""
+    import asyncio
+
+    from app.score.motivation import run_motivation_scoring
+
+    try:
+        n = await asyncio.to_thread(run_motivation_scoring)
+        log.info("job_nightly_score_and_digest: scored %d prospects (digest TODO)", n)
+    except Exception as exc:  # noqa: BLE001 - fail open, never crash the scheduler
+        log.warning("job_nightly_score_and_digest failed: %s", exc)
 
 
 def register_jobs() -> None:
