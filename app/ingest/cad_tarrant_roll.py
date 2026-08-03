@@ -1,45 +1,50 @@
-"""TAD appraisal-roll join (JOB-002b) — land-use classification + commercial SF.
+"""TAD appraisal-roll join (JOB-002b) — land-use classification via the State Use Code.
 
-The TADParcels GIS layer has no land-use code (verified — see cad_tarrant.py). The Texas
-state category (SPTB) code and real improvement SF live in TAD's **PropertyData** export
-(pipe-delimited "AAAA" layout; PropertyData-FullSet / -Commercial), joined to the GIS
-layer by ACCOUNT (a.k.a. TAXPIN). This module loads that roll and enriches each parcel.
+Layout CONFIRMED 2026-08-02 from TAD's PropertyData "AAAA" **fixed-length** layout. Fields
+we use (1-based Pos / Len):
+  RP              1/1    account type: R residential, C commercial, P personal, M mineral
+  Account_Num     6/8    join key (== the GIS layer's ACCOUNT, normalized)
+  Exemption_Code  192/4  non-blank => some exemption (feeds tax_exempt / JOB-008)
+  State_Use_Code  196/2  Texas SPTB category (F1 commercial, F2 industrial, E/D2 ranch...)
 
-WHAT IS VERIFIED/KNOWN (encoded here):
-  - Format: pipe-delimited PropertyData export (tad.org/resources/data-downloads).
-  - Join key: ACCOUNT / TAXPIN (present in both the roll and the GIS layer).
-  - The Texas SPTB state-category-code -> property-type mapping (standard statewide).
+HONEST LIMITATION: the export has **no commercial building square footage** — only
+`Living_Area` (residential) and `Improvement_Value` ($). So the 15,000 SF criterion cannot
+be sourced from TAD free data; this join delivers property_type + exempt flag, not SF.
 
-WHAT IS NOT YET VERIFIED (isolated behind COLUMNS_CONFIRMED):
-  - The exact PropertyData column names/positions for account, state code, and improvement
-    SF. The layout doc (PropertyData&PropertyLocationLayouts.pdf) blocks automated fetch —
-    confirm it manually (open the PDF, or read the delimited file's header), fill COL, set
-    the download URL, and flip COLUMNS_CONFIRMED. Until then load_tarrant_roll() returns {}
-    (logged), so wiring it in is harmless (behaviour = church-only classification).
+ACTIVATION: download the fixed-length PropertyData FullSet from tad.org/resources/data-downloads,
+save it locally, and set `TARRANT_ROLL_PATH` in .env to that file. `load_tarrant_roll()`
+returns `{}` until then (church-only classification, no behaviour change).
 """
 from __future__ import annotations
 
-import csv
 import logging
 from collections.abc import Iterable
 from dataclasses import dataclass
 
+from app.config import settings
+
 log = logging.getLogger("realtydog.cad.tarrant.roll")
 
 # --- Verified: Texas SPTB state category code -> canonical ELIGIBLE_TYPES ---------------
-# F1 commercial real, F2 industrial real, E rural land w/ improvements, D2 farm/ranch
-# improvements (barns). D1 (bare ag land) and A/B/C (residential/vacant) are NOT venues.
 _STATE_CODE_TYPE = {
     "F1": "commercial",
     "F2": "industrial",
     "E": "ranch_with_structure",
     "D2": "ranch_with_structure",
 }
-_EXEMPT_PREFIX = "X"  # SPTB X = totally exempt (churches, government, charities)
+_EXEMPT_PREFIX = "X"
+
+# --- Confirmed fixed-length field positions: name -> (0-based start, length) ------------
+_FIELDS = {
+    "rp": (0, 1),
+    "account": (5, 8),
+    "exemption": (191, 4),
+    "state_use": (195, 2),
+}
+_MIN_LINE_LEN = 197  # must reach the State_Use_Code field
 
 
 def classify_state_code(code: str | None) -> str | None:
-    """Map an SPTB state category code to a canonical property_type, or None."""
     if not code:
         return None
     c = code.strip().upper()
@@ -52,90 +57,89 @@ def is_exempt(code: str | None) -> bool | None:
     return code.strip().upper().startswith(_EXEMPT_PREFIX)
 
 
-# --- NOT verified: PropertyData column layout (confirm from the doc, then flip) ---------
-COLUMNS_CONFIRMED = False
-ROLL_URL = ""  # e.g. the PropertyData-Commercial (Delimited) download URL
-COL = {
-    # header name (or index) in the pipe-delimited PropertyData file — CONFIRM from
-    # https://www.tad.org/content/forms/PropertyData&PropertyLocationLayouts.pdf
-    "account": "Account_Num",
-    "state_code": "State_Use_Code",
-    "improvement_sf": None,  # confirm the building/improvement-SF column name
-}
+def _norm_account(s: str | None) -> str:
+    """Normalize an account number for joining (strip; drop leading zeros if numeric)."""
+    s = (s or "").strip()
+    return str(int(s)) if s.isdigit() else s
+
+
+def _slice(line: str, key: str) -> str:
+    start, length = _FIELDS[key]
+    return line[start : start + length].strip()
 
 
 @dataclass
 class RollRecord:
     account: str
     state_code: str | None
-    improvement_sf: int | None
     property_type: str | None
     tax_exempt: bool | None
 
 
-def _to_int(v) -> int | None:
-    try:
-        return int(float(v)) if v not in (None, "") else None
-    except (ValueError, TypeError):
+def parse_roll_line(line: str) -> RollRecord | None:
+    if len(line) < _MIN_LINE_LEN:
         return None
-
-
-def parse_roll_row(row: dict) -> RollRecord | None:
-    """Build a RollRecord from one parsed pipe-delimited row (header -> value)."""
-    account = (row.get(COL["account"]) or "").strip()
+    if _slice(line, "rp").upper() not in ("R", "C"):
+        return None  # real property only (skip Personal / Mineral)
+    account = _norm_account(_slice(line, "account"))
     if not account:
         return None
-    state_code = row.get(COL["state_code"])
-    sf = _to_int(row.get(COL["improvement_sf"])) if COL["improvement_sf"] else None
+    state = _slice(line, "state_use") or None
+    exemption = _slice(line, "exemption")
     return RollRecord(
         account=account,
-        state_code=state_code,
-        improvement_sf=sf,
-        property_type=classify_state_code(state_code),
-        tax_exempt=is_exempt(state_code),
+        state_code=state,
+        property_type=classify_state_code(state),
+        tax_exempt=bool(exemption) or is_exempt(state),
     )
 
 
 def parse_roll(lines: Iterable[str]) -> dict[str, RollRecord]:
-    """Parse pipe-delimited PropertyData lines (with a header row) into {account: record}."""
-    reader = csv.DictReader(lines, delimiter="|")
     out: dict[str, RollRecord] = {}
-    for row in reader:
-        rec = parse_roll_row(row)
+    for line in lines:
+        rec = parse_roll_line(line)
         if rec:
             out[rec.account] = rec
     return out
 
 
 def load_tarrant_roll(timeout: float = 120.0) -> dict[str, RollRecord]:
-    """Download + parse the PropertyData roll. Gated on COLUMNS_CONFIRMED; fail-open."""
-    if not COLUMNS_CONFIRMED or not ROLL_URL:
-        log.info("TAD roll pending column confirmation (JOB-002b) — returning empty join")
-        return {}
-    import httpx
+    """Load the fixed-length PropertyData roll from TARRANT_ROLL_PATH (local file), or a
+    URL if configured. Fail-open: any error -> empty join (church-only classification)."""
+    path = getattr(settings, "tarrant_roll_path", "")
+    if path:
+        try:
+            with open(path, encoding="latin-1", errors="replace") as fh:
+                return parse_roll(fh)
+        except OSError as exc:
+            log.warning("TAD roll file read failed (%s): %s", path, exc)
+            return {}
+    url = getattr(settings, "tarrant_roll_url", "")
+    if url:
+        import httpx
 
-    try:
-        with httpx.Client(timeout=timeout) as client:
-            resp = client.get(ROLL_URL)
-            resp.raise_for_status()
-            return parse_roll(resp.text.splitlines())
-    except Exception as exc:  # noqa: BLE001 - fail open, never crash the job
-        log.warning("TAD roll load failed: %s", exc)
-        return {}
+        try:
+            with httpx.Client(timeout=timeout) as client:
+                resp = client.get(url)
+                resp.raise_for_status()
+                return parse_roll(resp.text.splitlines())
+        except Exception as exc:  # noqa: BLE001 - fail open
+            log.warning("TAD roll download failed: %s", exc)
+            return {}
+    log.info("TAD roll not configured (set TARRANT_ROLL_PATH) — empty join, church-only classify")
+    return {}
 
 
 def enrich_from_roll(parcel, roll: dict[str, RollRecord]):
-    """Overlay roll data onto a RawParcel in place: state-code property_type (wins over the
-    owner-name church heuristic), real improvement SF, land_use_code, and tax_exempt. A
-    church parcel that is roll-exempt (state type None) keeps its church type but gains
-    tax_exempt=True. No-op when the account isn't in the roll (e.g. empty roll)."""
-    rec = roll.get(parcel.apn)
+    """Overlay roll land-use onto a RawParcel in place: state-code property_type wins over
+    the owner-name church heuristic; set land_use_code + tax_exempt. A church that is
+    roll-exempt (state type None) keeps its type but gains tax_exempt=True. No SF (the roll
+    has no commercial SF). No-op when the account isn't in the roll (e.g. empty roll)."""
+    rec = roll.get(_norm_account(parcel.apn))
     if not rec:
         return parcel
     if rec.property_type:
         parcel.property_type = rec.property_type
-    if rec.improvement_sf is not None:
-        parcel.improvement_sf = rec.improvement_sf
     if rec.state_code:
         parcel.land_use_code = rec.state_code
     if rec.tax_exempt is not None:

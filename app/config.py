@@ -34,6 +34,10 @@ class Settings(BaseSettings):
     # Optional / later
     skiptrace_api_key: str = ""
 
+    # JOB-002b: local path (or URL) to TAD's fixed-length PropertyData roll for land-use
+    tarrant_roll_path: str = ""
+    tarrant_roll_url: str = ""
+
     # Selection defaults (Layer-1 buy box)
     buybox_counties: str = "Dallas,Tarrant"  # primary counties (expand as more are ingested)
     buybox_min_acres: float = 5

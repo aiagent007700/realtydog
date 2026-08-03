@@ -60,14 +60,16 @@ appraisal-roll download** (`tad.org/resources/data-downloads`), joined to the GI
 requires that roll join — see STUBS **JOB-002b**. Interim: churches are inferred from the
 owner name (high-precision, positive-only); commercial/industrial/farm wait for the join.
 
-**The roll (JOB-002b):** TAD's **PropertyData** export — pipe-delimited ("AAAA" legacy
-layout), ~1.5M rows / ~56 cols, subsets `PropertyData-FullSet` / `-Commercial` /
-`-Residential` / `-Personal` / `-Minerals`; joins to the GIS layer by **ACCOUNT / TAXPIN**.
-The SPTB state-category code maps to our types (F1→commercial, F2→industrial, E/D2→
-ranch/barn, X→exempt). **The exact column names/positions are NOT yet confirmed** — the
-layout doc `tad.org/content/forms/PropertyData&PropertyLocationLayouts.pdf` returns 403 to
-automated fetch. Confirm it manually (open the PDF, or read the delimited file's header),
-then fill `COL` + `ROLL_URL` and set `COLUMNS_CONFIRMED=True` in `app/ingest/cad_tarrant_roll.py`.
+**The roll (JOB-002b) — layout CONFIRMED 2026-08-02:** TAD's **PropertyData** export,
+**fixed-length** "AAAA" layout, joins to the GIS layer by **ACCOUNT** (`_norm_account`
+handles zero-padding). Confirmed field positions (1-based Pos/Len): `RP` 1/1 (account type
+R/C/P/M), `Account_Num` 6/8, `Exemption_Code` 192/4, **`State_Use_Code` 196/2** (SPTB:
+F1→commercial, F2→industrial, E/D2→ranch/barn), `Improvement_Value` 397/13, `Living_Area`
+431/7, `Land_Acres` 441/9. **Important limitation:** there is **no commercial building
+square footage** in the export — only residential `Living_Area` and `Improvement_Value` ($).
+So the 15,000 SF criterion cannot come from TAD free data. `app/ingest/cad_tarrant_roll.py`
+parses this by position; activate by downloading the fixed-length FullSet and setting
+`TARRANT_ROLL_PATH`.
 
 ---
 

@@ -24,12 +24,12 @@ Format: `Trigger → Handler → … → Side effect`.
 
 ## Partially built 🟡
 
-- **JOB-002b (TAD appraisal-roll join)** — built and wired into `cad_refresh`
-  (`cad_tarrant_roll.py`: verified SPTB state-code→type mapping + `enrich_from_roll`), but
-  **dormant** — `load_tarrant_roll()` returns `{}` until the PropertyData column layout is
-  confirmed and `COLUMNS_CONFIRMED` is flipped. So commercial/industrial/farm don't classify
-  yet (only churches do), and the 15,000 SF check stays deferred. This is why the first live
-  run surfaced 356 *church* candidates and no commercial/barn.
+- **JOB-002b (TAD appraisal-roll join)** — layout CONFIRMED (fixed-length); parser + SPTB
+  mapping + `enrich_from_roll` built and wired into `cad_refresh` (`cad_tarrant_roll.py`,
+  22 tests). **Dormant only until the roll file is provided:** `load_tarrant_roll()` returns
+  `{}` until `TARRANT_ROLL_PATH` points at a downloaded PropertyData FullSet. Once set,
+  commercial/industrial/farm classify via `State_Use_Code`. The 15,000 SF check stays
+  deferred — the roll has no commercial SF (confirmed).
 - **Dallas (DCAD)** — adapter is a gated scaffold (`FIELD_MAP_CONFIRMED=False`); skipped at
   runtime until its field map is confirmed. Primary counties: Dallas + Tarrant.
 

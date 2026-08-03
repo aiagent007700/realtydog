@@ -56,21 +56,22 @@ Status: 🔴 not started · 🟡 in progress · 🟢 done
   field-map confirmation to enable Dallas; (3) first live run against a provisioned PostGIS DB
   (INFRA-001); (4) seed `sources` rows. **Caveat:** TAD `LIVING_ARE` is residential SF, so
   commercial improvement SF + the 15,000 SF check are deferred to enrichment.
-- **JOB-002b — TAD appraisal-roll join for land-use + commercial SF** 🟡 (P1 — WIP)
-  The TAD GIS layer has NO state-category/land-use code — so full `property_type`
-  classification (F1 commercial, F2 industrial, E/D2 farm/ranch→barn) AND real commercial
-  improvement SF require joining the TAD **PropertyData** export (pipe-delimited, joins on
-  ACCOUNT/TAXPIN) to the GIS layer. **Built (`cad_tarrant_roll.py`):** the verified Texas
-  SPTB state-code→type mapping (`classify_state_code`, `is_exempt`), `parse_roll` (pipe
-  DictReader), `enrich_from_roll` (roll type wins over the church heuristic; sets SF,
-  land_use_code, tax_exempt; church+X stays church but flagged exempt), wired into
-  `cad_refresh`; `tax_exempt` threaded through RawParcel→normalize→upsert; 6 tests.
-  **The ONE remaining piece:** the PropertyData column names/positions (account, state
-  code, improvement SF) — the layout PDF
-  (`tad.org/content/forms/PropertyData&PropertyLocationLayouts.pdf`) blocks automated fetch
-  (403), so confirm it manually, fill `COL` + `ROLL_URL`, and flip `COLUMNS_CONFIRMED=True`.
-  Until then `load_tarrant_roll()` returns `{}` (church-only classification, no behaviour
-  change). Closes the `LIVING_ARE`-residential caveat + re-enables the 15,000 SF check once on.
+- **JOB-002b — TAD appraisal-roll join for land-use** 🟡 (P1 — layout confirmed, needs the file)
+  Full `property_type` classification (F1 commercial, F2 industrial, E/D2 farm/ranch→barn)
+  comes from the TAD **PropertyData** export's `State_Use_Code`, joined to the GIS layer by
+  ACCOUNT. **Layout CONFIRMED 2026-08-02** (fixed-length "AAAA": RP@1, Account_Num@6,
+  Exemption_Code@192, State_Use_Code@196). **Built (`cad_tarrant_roll.py`):** verified SPTB
+  state-code→type mapping, **fixed-width** `parse_roll` (RP-filtered to real property),
+  `_norm_account` join-key normalization (drops leading zeros), `enrich_from_roll` (roll
+  type wins over church heuristic; sets land_use_code + tax_exempt from Exemption_Code);
+  wired into `cad_refresh`; 22 tests. **Remaining to activate:** download the fixed-length
+  PropertyData FullSet from tad.org, set `TARRANT_ROLL_PATH`, re-run `cad_refresh`; then
+  **verify the join actually matched** (`SELECT count(*) WHERE property_type='commercial'`)
+  — if 0, GIS `ACCOUNT` ≠ roll `Account_Num` format and we fall back to PIDN/TAXPIN.
+  **CORRECTION to earlier note:** the roll has **NO commercial building SF** (only residential
+  `Living_Area` + `Improvement_Value` $), so the 15,000 SF check **cannot** be sourced from
+  TAD free data — it stays deferred (proxy via `Improvement_Value`, parcel footprint, or a
+  paid source is a separate future task, not JOB-002b).
 - **JOB-003 — Foreclosure postings** 🔴 (Job 3, P1)
   Substitute Trustee notices (county clerk, first-Tuesday sales) → `distress_signals`.
 - **JOB-004 — Probate + Lis Pendens** 🔴 (Job 4, P1)
