@@ -49,12 +49,17 @@ def test_norm_account_drops_leading_zeros():
     assert _norm_account("  12345 ") == "12345"
 
 
-def _make_delim(rp="C", account="00012345", exemption="", state="F1") -> str:
-    # layout order: RP, Appraisal_Year, Account_Num, Record_Type, PIDN, Owner_Name,
-    # Owner_Address, Owner_CityState, Owner_Zip, Situs_Address, Proert_Address, TAD_Map,
-    # MAPSCO, Exemption_Code, State_Use_Code
-    cols = [""] * 16
-    cols[0], cols[2], cols[13], cols[14] = rp, account, exemption, state
+# The real delimited header (subset through State_Use_Code) — parse must key off names.
+_DELIM_HEADER = (
+    "RP|Appraisal_Year|Account_Num|Record_Type|Sequence_No|PIDN|Owner_Name|Owner_Address|"
+    "Owner_CityState|Owner_Zip|Owner_Zip4|Owner_CRRT|Situs_Address|Property_Class|TAD_Map|"
+    "MAPSCO|Exemption_Code|State_Use_Code|LegalDescription"
+)
+
+
+def _delim_row(rp="C", account="00012345", exemption="", state="F1A") -> str:
+    cols = [""] * 19
+    cols[0], cols[2], cols[16], cols[17] = rp, account, exemption, state  # real positions
     return "|".join(cols)
 
 
@@ -65,16 +70,20 @@ def test_parse_roll_line_commercial():
     assert rec.property_type == "commercial"
 
 
-def test_parse_roll_line_delimited():
-    rec = parse_roll_line(_make_delim(rp="C", account="00012345", state="F2"))
-    assert rec is not None
-    assert rec.account == "12345"
-    assert rec.property_type == "industrial"
-
-
-def test_parse_roll_skips_header_row():
-    header = _make_delim(rp="RP", account="Account_Num", state="State_Use_Code")
-    assert parse_roll_line(header) is None
+def test_parse_roll_delimited_by_header():
+    # Header-based parse against the real column names; codes are SPTB-with-subcode.
+    lines = [
+        _DELIM_HEADER,
+        _delim_row(rp="C", account="00012345", state="F1A"),  # commercial
+        _delim_row(rp="C", account="200", state="F2B"),  # industrial
+        _delim_row(rp="C", account="300", state="C1C"),  # vacant -> None
+        _delim_row(rp="P", account="400", state="F1"),  # personal property -> skipped
+    ]
+    roll = parse_roll(lines)
+    assert roll["12345"].property_type == "commercial"
+    assert roll["200"].property_type == "industrial"
+    assert roll["300"].property_type is None  # C1C vacant lot
+    assert "400" not in roll  # RP=P skipped
 
 
 def test_parse_roll_line_skips_personal_property():
