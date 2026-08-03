@@ -35,10 +35,10 @@ Format: `Trigger → Handler → … → Side effect`.
 - **SEL-002 (motivation score)** — built + wired into the nightly job; **run live** (337
   prospects scored). Ranks on owner attributes now; distress weights activate as those
   signals land. `python -m app.score.motivation` to re-run.
-- **JOB-001 (tax-sale)** — built (`app/ingest/cad_tax_sale.py`) + wired into the scheduler:
-  fetches the Tarrant Constable Pct-3 monthly pages → `distress_signals(tax_sale)` matched to
-  `parcels.apn`. Not yet run live — `python -m app.ingest.cad_tax_sale` (needs bs4). Feeds
-  SEL-002's +40 tax_sale weight. Tarrant only; Collin/Denton (MVBA) is future.
+- **JOB-001 (tax-sale)** — built + wired + **run live 2026-08-02: 0 parcel matches** (near-zero
+  base rate — tax sales are almost all small residential, not 5+ acre parcels). Not a bug; the
+  church universe simply has no tax-sale overlap right now. Machinery is correct and will catch
+  matches as the universe broadens (commercial). `python -m app.ingest.cad_tax_sale` to re-run.
 
 ## NOT wired yet 🔴 (see STUBS.md)
 
