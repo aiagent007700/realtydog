@@ -49,11 +49,32 @@ def test_norm_account_drops_leading_zeros():
     assert _norm_account("  12345 ") == "12345"
 
 
+def _make_delim(rp="C", account="00012345", exemption="", state="F1") -> str:
+    # layout order: RP, Appraisal_Year, Account_Num, Record_Type, PIDN, Owner_Name,
+    # Owner_Address, Owner_CityState, Owner_Zip, Situs_Address, Proert_Address, TAD_Map,
+    # MAPSCO, Exemption_Code, State_Use_Code
+    cols = [""] * 16
+    cols[0], cols[2], cols[13], cols[14] = rp, account, exemption, state
+    return "|".join(cols)
+
+
 def test_parse_roll_line_commercial():
     rec = parse_roll_line(_make_line(rp="C", account="12345", state="F1"))
     assert rec is not None
     assert rec.account == "12345"  # normalized from 00012345
     assert rec.property_type == "commercial"
+
+
+def test_parse_roll_line_delimited():
+    rec = parse_roll_line(_make_delim(rp="C", account="00012345", state="F2"))
+    assert rec is not None
+    assert rec.account == "12345"
+    assert rec.property_type == "industrial"
+
+
+def test_parse_roll_skips_header_row():
+    header = _make_delim(rp="RP", account="Account_Num", state="State_Use_Code")
+    assert parse_roll_line(header) is None
 
 
 def test_parse_roll_line_skips_personal_property():

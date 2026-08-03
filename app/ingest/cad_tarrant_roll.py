@@ -43,6 +43,11 @@ _FIELDS = {
 }
 _MIN_LINE_LEN = 197  # must reach the State_Use_Code field
 
+# TAD also publishes a pipe-delimited version (same fields, same order). Column indices
+# from the layout order: RP=0, Appraisal_Year=1, Account_Num=2, Record_Type=3, PIDN=4,
+# Owner_Name=5 ... Exemption_Code=13, State_Use_Code=14.
+_DELIM_IDX = {"rp": 0, "account": 2, "exemption": 13, "state_use": 14}
+
 
 def classify_state_code(code: str | None) -> str | None:
     if not code:
@@ -77,15 +82,26 @@ class RollRecord:
 
 
 def parse_roll_line(line: str) -> RollRecord | None:
-    if len(line) < _MIN_LINE_LEN:
-        return None
-    if _slice(line, "rp").upper() not in ("R", "C"):
-        return None  # real property only (skip Personal / Mineral)
-    account = _norm_account(_slice(line, "account"))
+    line = line.rstrip("\r\n")
+    if "|" in line:  # pipe-delimited version
+        fields = line.split("|")
+        if len(fields) <= _DELIM_IDX["state_use"]:
+            return None
+        rp = fields[_DELIM_IDX["rp"]].strip().upper()
+        account = _norm_account(fields[_DELIM_IDX["account"]])
+        exemption = fields[_DELIM_IDX["exemption"]].strip()
+        state = fields[_DELIM_IDX["state_use"]].strip() or None
+    else:  # fixed-length version
+        if len(line) < _MIN_LINE_LEN:
+            return None
+        rp = _slice(line, "rp").upper()
+        account = _norm_account(_slice(line, "account"))
+        exemption = _slice(line, "exemption")
+        state = _slice(line, "state_use") or None
+    if rp not in ("R", "C"):
+        return None  # real property only (skip Personal / Mineral / header row)
     if not account:
         return None
-    state = _slice(line, "state_use") or None
-    exemption = _slice(line, "exemption")
     return RollRecord(
         account=account,
         state_code=state,
