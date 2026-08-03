@@ -38,10 +38,17 @@ Status: 🔴 not started · 🟡 in progress · 🟢 done
 
 ## Ingestion jobs (currently `log.info("not implemented")` stubs in `app/main.py`)
 
-- **JOB-001 — Tax-sale list parser** 🔴 (Job 1, P0)
-  Highest yield/effort: pre-filtered distressed owners, DFW-wide, free. Parse
-  LGBS / MVBA / Perdue Brandon HTML+PDF → `distress_signals(signal_type='tax_sale')`.
-  Match by APN/legal description (rows lack clean street addresses). First real leads.
+- **JOB-001 — Tax-sale list parser** 🟡 (Job 1, P0 — built for Tarrant)
+  Built (`app/ingest/cad_tax_sale.py`) against the **Tarrant County Constable Pct-3** monthly
+  HTML pages (`tarrantcountytx.gov` — accessible, NOT behind TAD's Cloudflare block). Parses
+  the CAUSE/ACCOUNT/STATUS tables, filters to "For Sale", matches ACCOUNT → `parcels.apn`
+  (normalized), writes `distress_signals(signal_type='tax_sale')` (which SEL-002 weights +40).
+  Refresh pattern (delete+reinsert this source), guarded so a fetch failure never wipes
+  existing signals; fail-open; 2 tests. Run: `python -m app.ingest.cad_tax_sale` (needs
+  `pip install beautifulsoup4` locally). **Rejected:** the LGBS SPA (`taxsales.lgbs.com`) has
+  no public API. **Not built:** MVBA/Perdue Brandon for Collin/Denton (future), and
+  struck-off/resale properties (a separate acquisition path). **Reality:** matches on our
+  5+ acre parcels will be sparse (most tax-delinquent property is small residential).
 - **JOB-002 — CAD parcel universe** 🟡 (Job 2, P0 — WIP)
   The universe of buy-box candidates + owner mailing addresses (enables mail-first).
   Bulk CAD for the primary counties (Dallas + Tarrant) → `parcels`; compute `meets_buy_box`

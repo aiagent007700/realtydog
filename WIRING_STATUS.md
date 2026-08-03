@@ -32,11 +32,13 @@ Format: `Trigger → Handler → … → Side effect`.
   deferred — the roll has no commercial SF (confirmed).
 - **Dallas (DCAD)** — adapter is a gated scaffold (`FIELD_MAP_CONFIRMED=False`); skipped at
   runtime until its field map is confirmed. Primary counties: Dallas + Tarrant.
-- **SEL-002 (motivation score)** — built (`app/score/motivation.py`) + wired into the nightly
-  job; scores buy-box parcels → `prospects` (score + breakdown). Not yet run against the live
-  DB — first run: `python -m app.score.motivation`. Ranks on owner attributes now (absentee,
-  tenure, estate); distress-signal weights activate when JOB-001/003/004/008 populate
-  `distress_signals`.
+- **SEL-002 (motivation score)** — built + wired into the nightly job; **run live** (337
+  prospects scored). Ranks on owner attributes now; distress weights activate as those
+  signals land. `python -m app.score.motivation` to re-run.
+- **JOB-001 (tax-sale)** — built (`app/ingest/cad_tax_sale.py`) + wired into the scheduler:
+  fetches the Tarrant Constable Pct-3 monthly pages → `distress_signals(tax_sale)` matched to
+  `parcels.apn`. Not yet run live — `python -m app.ingest.cad_tax_sale` (needs bs4). Feeds
+  SEL-002's +40 tax_sale weight. Tarrant only; Collin/Denton (MVBA) is future.
 
 ## NOT wired yet 🔴 (see STUBS.md)
 

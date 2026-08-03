@@ -22,7 +22,16 @@ scheduler = AsyncIOScheduler(timezone="America/Chicago")
 
 # --- Scheduled jobs (skeletons — see README §§5, 9) -------------------------
 async def job_tax_sale_lists() -> None:
-    log.info("job_tax_sale_lists (Job 1): not implemented yet")
+    """Job 1 — Tarrant constable tax-sale distress signals. Thread-offloaded, fail-open."""
+    import asyncio
+
+    from app.ingest.cad_tax_sale import run_tax_sale_ingest
+
+    try:
+        n, m = await asyncio.to_thread(run_tax_sale_ingest)
+        log.info("job_tax_sale_lists (Job 1): %d active listings, %d matched", n, m)
+    except Exception as exc:  # noqa: BLE001 - fail open, never crash the scheduler
+        log.warning("job_tax_sale_lists (Job 1) failed: %s", exc)
 
 
 async def job_foreclosure_postings() -> None:
