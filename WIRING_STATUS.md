@@ -24,12 +24,12 @@ Format: `Trigger → Handler → … → Side effect`.
 
 ## Partially built 🟡
 
-- **JOB-002b (TAD appraisal-roll join)** — layout CONFIRMED (fixed-length); parser + SPTB
-  mapping + `enrich_from_roll` built and wired into `cad_refresh` (`cad_tarrant_roll.py`,
-  22 tests). **Dormant only until the roll file is provided:** `load_tarrant_roll()` returns
-  `{}` until `TARRANT_ROLL_PATH` points at a downloaded PropertyData FullSet. Once set,
-  commercial/industrial/farm classify via `State_Use_Code`. The 15,000 SF check stays
-  deferred — the roll has no commercial SF (confirmed).
+- **JOB-002b (TAD appraisal-roll join)** — **LIVE 2026-08-03.** Delimited PropertyData
+  FullSet (724k records) joined to parcels on **GIS_Link ↔ GISLINK** (the account systems
+  differ; this was the fix). First run: **12,916/13,218 parcels matched**, buy-box candidates
+  337 → ~4,575 (F1 commercial 3,758 · E/EC ranch 464 · F2 industrial 284). `TARRANT_ROLL_PATH`
+  set locally. **Still deferred:** the 15,000 SF check (roll has no commercial building SF)
+  and any narrowing to actually-convertible buildings — F1=3,758 is the raw top-of-funnel.
 - **Dallas (DCAD)** — adapter is a gated scaffold (`FIELD_MAP_CONFIRMED=False`); skipped at
   runtime until its field map is confirmed. Primary counties: Dallas + Tarrant.
 - **SEL-002 (motivation score)** — built + wired into the nightly job; **run live** (337
