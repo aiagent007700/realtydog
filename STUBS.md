@@ -133,7 +133,7 @@ Status: 🔴 not started · 🟡 in progress · 🟢 done
   Dedup ledger keyed on parcel+signal so nothing double-fires. Cold selected, never notified.
 - **DIGEST-001 — Nightly score + digest job** 🔴
   Recompute motivation + return gate → emit new-hot-prospect digest to the group.
-- **OUTREACH-001 — Outreach CRM + mail-merge** 🔴
+- **OUTREACH-001 — Outreach CRM + mail-merge** 🟡 (mail-merge built)
   `prospects` status pipeline (prospect → contacted → responded → analyzing → offer),
   `outreach_log`, CSV export (name + CAD mailing address) for a mail run. Tune motivation
   weights against `outreach_log` responses — the one real feedback signal we get.
