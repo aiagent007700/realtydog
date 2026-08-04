@@ -44,6 +44,9 @@ class Settings(BaseSettings):
     buybox_min_sf: int = 15000
     buybox_max_purchase: int = 4_000_000
     buybox_max_all_in: int = 5_000_000
+    # Affordability ceiling on assessed value — drops big-box / large operating commercial
+    # that could never be a <=$4M buy. Tunable proxy; 0 disables.
+    buybox_max_assessed: int = 6_000_000
 
     # Notification thresholds (motivation score buckets)
     motivation_hot: int = 60

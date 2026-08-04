@@ -18,14 +18,14 @@ _UPSERT = text(
     INSERT INTO parcels (
       apn, county, situs_address, city, zip, lat, lon, geo_point,
       owner_name, owner_type, owner_mailing_address, owner_mailing_state,
-      acres, improvement_sf, land_use_code, year_built, assessed_value,
+      acres, improvement_sf, property_type, land_use_code, year_built, assessed_value,
       last_sale_date, tax_exempt, absentee, tenure_years, meets_buy_box, source, last_updated
     ) VALUES (
       :apn, :county, :situs_address, :city, :zip, :lat, :lon,
       CASE WHEN :lat IS NOT NULL AND :lon IS NOT NULL
            THEN ST_SetSRID(ST_MakePoint(:lon, :lat), 4326)::geography END,
       :owner_name, :owner_type, :owner_mailing_address, :owner_mailing_state,
-      :acres, :improvement_sf, :land_use_code, :year_built, :assessed_value,
+      :acres, :improvement_sf, :property_type, :land_use_code, :year_built, :assessed_value,
       :last_sale_date, :tax_exempt, :absentee, :tenure_years, :meets_buy_box, :source, now()
     )
     ON CONFLICT (county, apn) DO UPDATE SET
@@ -40,6 +40,7 @@ _UPSERT = text(
       owner_mailing_address = EXCLUDED.owner_mailing_address,
       acres = EXCLUDED.acres,
       improvement_sf = EXCLUDED.improvement_sf,
+      property_type = EXCLUDED.property_type,
       land_use_code = EXCLUDED.land_use_code,
       year_built = EXCLUDED.year_built,
       assessed_value = EXCLUDED.assessed_value,

@@ -56,7 +56,7 @@ def _owner_type(owner_name: str | None) -> str | None:
     if not owner_name:
         return None
     n = f" {owner_name.upper()} "
-    if "ESTATE OF" in n or " ESTATE " in n:
+    if "ESTATE OF" in n:  # decedent estate — NOT "REAL ESTATE" (a corporate holding co.)
         return "estate"
     markers = (" LLC", " INC", " CORP", " LP ", " LTD", " TRUST", " CHURCH",
                " MINISTR", " FOUNDATION", " ASSN", " ASSOCIATION")
@@ -90,6 +90,12 @@ def meets_buy_box(p: RawParcel) -> bool:
         return False  # unverifiable / too-small acreage -> fail closed
     if p.property_type not in ELIGIBLE_TYPES:
         return False  # unknown or ineligible type -> not a candidate
+    # Affordability ceiling: drop parcels assessed far above the ~$4M buy budget (big-box
+    # retail, large operating commercial). Assessed-value proxy; fail-open on missing value
+    # (unknown price -> keep for review). The precise price test is the Layer-3 return gate.
+    if (p.assessed_value is not None and settings.buybox_max_assessed
+            and p.assessed_value > settings.buybox_max_assessed):
+        return False
     return True
 
 
@@ -108,6 +114,7 @@ def normalize(p: RawParcel) -> dict:
         "owner_mailing_state": p.owner_mailing_state,
         "acres": p.acres,
         "improvement_sf": p.improvement_sf,
+        "property_type": p.property_type,
         "land_use_code": p.land_use_code,
         "year_built": p.year_built,
         "assessed_value": p.assessed_value,

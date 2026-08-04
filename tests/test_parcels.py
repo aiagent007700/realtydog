@@ -14,6 +14,9 @@ def test_owner_type():
     assert _owner_type("FIRST BAPTIST CHURCH") == "entity"
     assert _owner_type("ACME HOLDINGS LLC") == "entity"
     assert _owner_type("ESTATE OF JANE DOE") == "estate"
+    # "REAL ESTATE" companies are entities, NOT decedent estates (regression guard)
+    assert _owner_type("WAL-MART REAL ESTATE BUS TRUST") == "entity"
+    assert _owner_type("RON STURGEON REAL ESTATE LP") == "entity"
     assert _owner_type(None) is None
 
 
@@ -36,6 +39,21 @@ def test_buy_box_requires_eligible_type():
 def test_buy_box_pass():
     p = RawParcel(apn="1", county="Tarrant", property_type="church", acres=12)
     assert meets_buy_box(p) is True
+
+
+def test_buy_box_assessed_ceiling_excludes_big_box():
+    # A 25-acre commercial parcel assessed at $18M (Walmart-style) is not a <=$4M buy.
+    p = RawParcel(apn="1", county="Tarrant", property_type="commercial", acres=25,
+                  assessed_value=18_000_000)
+    assert meets_buy_box(p) is False
+    # Same parcel affordably assessed passes.
+    p2 = RawParcel(apn="2", county="Tarrant", property_type="commercial", acres=25,
+                   assessed_value=2_500_000)
+    assert meets_buy_box(p2) is True
+    # Missing assessed value -> fail open (kept for review).
+    p3 = RawParcel(apn="3", county="Tarrant", property_type="commercial", acres=25,
+                   assessed_value=None)
+    assert meets_buy_box(p3) is True
 
 
 def test_buy_box_wrong_county():
