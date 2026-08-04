@@ -52,19 +52,28 @@ def _norm(s: str) -> str:
     return " ".join(s.upper().split())
 
 
-# Government / public / institutional owners that don't sell to a private buyer for a venue.
-_PUBLIC_OWNER_MARKERS = (
+# Owners to exclude: government/public entities AND operating non-venue uses (golf courses,
+# cemeteries, landfills, quarries, airport/industrial, ranges, storage). Heuristic, owner-name
+# based — high-confidence recurring offenders only; the long tail is human review, not rules.
+_EXCLUDED_OWNER_MARKERS = (
+    # government / public
     "CITY OF", "TOWN OF", "STATE OF", "COUNTY OF", " COUNTY ", "U S A", " USA ",
     "UNITED STATES", " ISD", "SCHOOL DISTRICT", "INDEPENDENT SCHOOL", "HOUSING AUTHORITY",
-    "WATER DISTRICT", " MUD ", "MUNICIPAL UTILITY", "DEPT OF", "DEPARTMENT OF",
+    "WATER DISTRICT", "WATER DIST", "WATER BOARD", "REGIONAL WATER", "RIVER AUTHORITY",
+    " MUD ", "MUNICIPAL UTILITY", "DEPT OF", "DEPARTMENT OF",
+    # operating non-venue uses
+    "GOLF", "COUNTRY CLUB", "CEMETERY", "MEMORIAL PARK", "MEM PARK", "MAUSOLEUM",
+    "LANDFILL", "WASTE", "SAND PIT", "QUARRY", "GRAVEL",
+    "HANGAR", "AIRLINES", "AVIATION", "AIRPORT",
+    "SKEET", "GUN CLUB", "SHOOTING", "RIFLE RANGE", " STORAGE",
 )
 
 
-def _is_public_owner(owner_name: str | None) -> bool:
+def _is_excluded_owner(owner_name: str | None) -> bool:
     if not owner_name:
         return False
     n = f" {owner_name.upper()} "
-    return any(m in n for m in _PUBLIC_OWNER_MARKERS)
+    return any(m in n for m in _EXCLUDED_OWNER_MARKERS)
 
 
 def _owner_type(owner_name: str | None) -> str | None:
@@ -101,8 +110,8 @@ def meets_buy_box(p: RawParcel) -> bool:
     """
     if p.county not in settings.counties:
         return False
-    if _is_public_owner(p.owner_name):
-        return False  # city/state/USA/ISD/utility -> not a private-sale venue candidate
+    if _is_excluded_owner(p.owner_name):
+        return False  # government, or operating non-venue use (golf/cemetery/landfill/...)
     if p.acres is None or p.acres < settings.buybox_min_acres:
         return False  # unverifiable / too-small acreage -> fail closed
     if settings.buybox_max_acres and p.acres > settings.buybox_max_acres:

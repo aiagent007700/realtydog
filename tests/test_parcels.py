@@ -41,14 +41,16 @@ def test_buy_box_pass():
     assert meets_buy_box(p) is True
 
 
-def test_buy_box_excludes_public_owners():
+def test_buy_box_excludes_public_and_non_venue_owners():
     for name in ("FORT WORTH CITY OF", "TEXAS STATE OF", "U S A", "AZLE, ISD",
-                 "TARRANT COUNTY OF"):
+                 "TARRANT COUNTY OF", "TARRANT REGIONAL WATER DIST", "RIDGLEA COUNTRY CLUB",
+                 "RESORT GOLF CLUB LLC", "LAUREL LAND MEMORIAL PARK", "IESI TX LANDFILL LP",
+                 "AMERICAN AIRLINES HANGAR", "WILLOW CREEK STORAGE & LAND"):
         p = RawParcel(apn="1", county="Tarrant", property_type="commercial", acres=20,
                       owner_name=name)
         assert meets_buy_box(p) is False, name
-    # A private owner passes.
-    p = RawParcel(apn="1", county="Tarrant", property_type="commercial", acres=20,
+    # A private owner with a normal name passes.
+    p = RawParcel(apn="1", county="Tarrant", property_type="ranch_with_structure", acres=20,
                   owner_name="SMITH FAMILY LP")
     assert meets_buy_box(p) is True
 
