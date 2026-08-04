@@ -2,7 +2,9 @@
 
 The delimited PropertyData export has a HEADER row with named columns (confirmed 2026-08-02
 against the real file), so we parse by column NAME — robust to column order:
-  RP  (R/C/P/M account type) · Account_Num (join key) · Exemption_Code · State_Use_Code
+  RP (R/C/P/M) · Account_Num · Exemption_Code · State_Use_Code · GIS_Link
+JOIN KEY is **GIS_Link ↔ the GIS layer's GISLINK** — the roll's Account_Num is a DIFFERENT
+ID system from the GIS ACCOUNT (verified: church apn 40331792 = roll Account_Num 68136).
 State_Use_Code holds TAD's SPTB category with a subcode, e.g. F1A (commercial), F2B
 (industrial), E1 (rural improved), D2 (farm improvements), C1C (vacant → not a venue).
 The fixed-length variant (no header) is also supported, parsed by position.
@@ -32,8 +34,15 @@ _STATE_CODE_TYPE = {
 }
 _EXEMPT_PREFIX = "X"
 
-# Delimited-file column names (the header) we read.
-_COL = {"rp": "RP", "account": "Account_Num", "state": "State_Use_Code", "exempt": "Exemption_Code"}
+# Delimited-file column names (the header) we read. GIS_Link is the JOIN KEY — it ties to
+# the GIS layer's GISLINK (the roll's Account_Num is a DIFFERENT ID system from GIS ACCOUNT).
+_COL = {
+    "rp": "RP",
+    "account": "Account_Num",
+    "state": "State_Use_Code",
+    "exempt": "Exemption_Code",
+    "gis_link": "GIS_Link",
+}
 # Fixed-length fallback positions: name -> (0-based start, length).
 _FIELDS = {"rp": (0, 1), "account": (5, 8), "exemption": (191, 4), "state_use": (195, 2)}
 _MIN_LINE_LEN = 197
@@ -55,6 +64,11 @@ def is_exempt(code: str | None) -> bool | None:
 def _norm_account(s: str | None) -> str:
     s = (s or "").strip()
     return str(int(s)) if s.isdigit() else s
+
+
+def _norm_gislink(s: str | None) -> str:
+    """The roll's GIS_Link / GIS layer's GISLINK — space-padded; strip + uppercase."""
+    return (s or "").strip().upper()
 
 
 @dataclass
@@ -97,28 +111,31 @@ def parse_roll(lines: Iterable[str]) -> dict[str, RollRecord]:
     except StopIteration:
         return {}
 
-    if "|" in first:  # delimited, header row
+    if "|" in first:  # delimited, header row — key by GIS_Link (the real join key)
         cols = {name: i for i, name in enumerate(first.split("|"))}
-        i_acct, i_state = cols.get(_COL["account"]), cols.get(_COL["state"])
-        if i_acct is None or i_state is None:
-            log.warning("roll header missing expected columns; got %s...", first[:80])
+        i_state, i_gis = cols.get(_COL["state"]), cols.get(_COL["gis_link"])
+        if i_state is None or i_gis is None:
+            log.warning("roll header missing State_Use_Code/GIS_Link; got %s...", first[:80])
             return {}
-        i_rp, i_exempt = cols.get(_COL["rp"]), cols.get(_COL["exempt"])
+        i_rp, i_acct, i_exempt = cols.get(_COL["rp"]), cols.get(_COL["account"]), cols.get(_COL["exempt"])
         out: dict[str, RollRecord] = {}
         for line in it:
             f = line.rstrip("\r\n").split("|")
-            if len(f) <= i_state:
+            if len(f) <= max(i_state, i_gis):
                 continue
 
             def at(i):
                 return f[i] if (i is not None and i < len(f)) else ""
 
+            gis = _norm_gislink(at(i_gis))
+            if not gis:
+                continue  # no GIS key -> can't join
             rec = _record(at(i_rp), at(i_acct), at(i_state), at(i_exempt))
             if rec:
-                out[rec.account] = rec
+                out[gis] = rec
         return out
 
-    # fixed-length (no header)
+    # fixed-length fallback (no header, no GIS_Link position) — keyed by account (legacy).
     out = {}
     for line in itertools.chain([first], it):
         rec = parse_roll_line(line)
@@ -157,8 +174,9 @@ def enrich_from_roll(parcel, roll: dict[str, RollRecord]):
     """Overlay roll land-use onto a RawParcel in place: state-code property_type wins over the
     owner-name church heuristic; set land_use_code (raw code, for auditing) + tax_exempt. A
     church that is roll-exempt (state type None) keeps its type but gains tax_exempt=True.
-    No-op when the account isn't in the roll."""
-    rec = roll.get(_norm_account(parcel.apn))
+    No-op when the parcel's GIS_Link isn't in the roll."""
+    key = _norm_gislink(getattr(parcel, "gis_link", None))
+    rec = roll.get(key) if key else None
     if not rec:
         return parcel
     if rec.property_type:

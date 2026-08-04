@@ -44,6 +44,7 @@ class RawParcel:
     assessed_value: float | None = None
     last_sale_date: date | None = None
     tax_exempt: bool | None = None  # from the appraisal-roll state code (X = exempt)
+    gis_link: str | None = None  # GIS GISLINK — the key that joins to the roll's GIS_Link
     source: str | None = None
 
 

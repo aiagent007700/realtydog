@@ -121,6 +121,7 @@ def map_feature(attrs: dict, geom: dict | None = None) -> RawParcel | None:
         year_built=_to_int(attrs.get("YEAR_BUILT")),
         assessed_value=_to_float(attrs.get("TOTAL_VALU")),
         last_sale_date=_to_date(attrs.get("DEED_DATE")),
+        gis_link=(attrs.get("GISLINK") or "").strip() or None,  # joins to the roll's GIS_Link
         source="tad_arcgis",
     )
 
