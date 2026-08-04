@@ -41,6 +41,27 @@ def test_buy_box_pass():
     assert meets_buy_box(p) is True
 
 
+def test_buy_box_excludes_public_owners():
+    for name in ("FORT WORTH CITY OF", "TEXAS STATE OF", "U S A", "AZLE, ISD",
+                 "TARRANT COUNTY OF"):
+        p = RawParcel(apn="1", county="Tarrant", property_type="commercial", acres=20,
+                      owner_name=name)
+        assert meets_buy_box(p) is False, name
+    # A private owner passes.
+    p = RawParcel(apn="1", county="Tarrant", property_type="commercial", acres=20,
+                  owner_name="SMITH FAMILY LP")
+    assert meets_buy_box(p) is True
+
+
+def test_buy_box_max_acres_excludes_giant_parcels():
+    p = RawParcel(apn="1", county="Tarrant", property_type="ranch_with_structure", acres=485,
+                  owner_name="BIG RANCH LLC")
+    assert meets_buy_box(p) is False  # over the 50-acre venue cap
+    p2 = RawParcel(apn="2", county="Tarrant", property_type="ranch_with_structure", acres=30,
+                   owner_name="BIG RANCH LLC")
+    assert meets_buy_box(p2) is True
+
+
 def test_buy_box_assessed_ceiling_excludes_big_box():
     # A 25-acre commercial parcel assessed at $18M (Walmart-style) is not a <=$4M buy.
     p = RawParcel(apn="1", county="Tarrant", property_type="commercial", acres=25,

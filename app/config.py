@@ -41,6 +41,7 @@ class Settings(BaseSettings):
     # Selection defaults (Layer-1 buy box)
     buybox_counties: str = "Dallas,Tarrant"  # primary counties (expand as more are ingested)
     buybox_min_acres: float = 5
+    buybox_max_acres: float = 50  # cap out venue-sized parcels (0 disables); tunable
     buybox_min_sf: int = 15000
     buybox_max_purchase: int = 4_000_000
     buybox_max_all_in: int = 5_000_000
